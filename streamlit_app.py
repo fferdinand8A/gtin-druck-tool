@@ -18,19 +18,33 @@ st.markdown("""
             }
             #etikett {
                 position: absolute;
-                left: 0;
                 top: 0;
-                width: 100%;
+                left: 0;
+                width: 60mm;
+                height: 30mm;
+                padding: 5mm;
                 text-align: center;
             }
+            html, body {
+                margin: 0;
+                padding: 0;
+            }
         }
-        button {
+        #etikett img {
+            max-width: 100%;
+            height: auto;
+        }
+        .druck-button {
             margin-top: 20px;
+            padding: 8px 16px;
+            font-size: 16px;
         }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("📦 GTIN-Etikett drucken")
+st.caption("Gib eine GTIN/EAN ein und drucke sofort dein Barcode-Etikett.")
+
 gtin = st.text_input("GTIN eingeben oder scannen:", max_chars=14)
 
 if gtin and len(gtin) >= 8:
@@ -41,14 +55,14 @@ if gtin and len(gtin) >= 8:
         buffer.seek(0)
         img_data = base64.b64encode(buffer.getvalue()).decode()
 
-        html = f'''
-            <div id="etikett">
-                <img src="data:image/png;base64,{img_data}" style="margin-top: 20px;"/>
-                <p style="font-size:18px;">GTIN: {gtin}</p>
+        etikett_html = f"""
+            <div id='etikett'>
+                <img src='data:image/png;base64,{img_data}' />
+                <p style='font-size:14px;'>GTIN: {gtin}</p>
             </div>
-            <button onclick="window.print()">Etikett drucken</button>
-        '''
-        st.markdown(html, unsafe_allow_html=True)
+            <button class='druck-button' onclick='window.print()'>Etikett drucken</button>
+        """
+        st.markdown(etikett_html, unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
