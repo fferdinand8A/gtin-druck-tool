@@ -8,16 +8,17 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
 st.title("GTIN-Etikett drucken")
 
-# Initialisierung der Session-State
+# GTIN aus Session State initialisieren
 if "gtin" not in st.session_state:
     st.session_state.gtin = ""
 
-# Eingabefeld
+# Eingabe-Feld mit Session State
 gtin = st.text_input("GTIN eingeben oder scannen:", value=st.session_state.gtin, key="gtin_input")
 
-# Validierung und Anzeige
+# Nur wenn gültig
 if gtin and len(gtin) in [8, 12, 13, 14]:
     try:
+        # Barcode generieren
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
@@ -27,6 +28,7 @@ if gtin and len(gtin) in [8, 12, 13, 14]:
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
+        # HTML-Seite im neuen Tab drucken
         html = f"""
         <html>
         <head>
@@ -55,16 +57,17 @@ if gtin and len(gtin) in [8, 12, 13, 14]:
             }}
         </style>
         </head>
-        <body onload="window.print()">
+        <body onload="window.print(); window.close();">
             <img src="data:image/png;base64,{barcode_b64}" alt="GTIN Barcode">
             <div>GTIN: {gtin}</div>
         </body>
         </html>
         """
 
+        # Drucken als HTML-Komponente
         components.html(html, height=400)
 
-        # Zurücksetzen nach Anzeige
+        # Feld nach Anzeige leeren
         st.session_state.gtin = ""
 
     except Exception as e:
