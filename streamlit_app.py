@@ -1,61 +1,41 @@
 import streamlit as st
 import barcode
 from barcode.writer import ImageWriter
-from PIL import Image
 import io
 import base64
-import streamlit.components.v1 as components
+from PIL import Image
 
-st.set_page_config(page_title="GTIN Etikett drucken", layout="centered")
+st.set_page_config(page_title="GTIN Etikett PNG", layout="centered")
 
-st.markdown("""
-    <style>
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            #etikett, #etikett * {
-                visibility: visible;
-            }
-            #etikett {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 60mm;
-                height: 30mm;
-                padding: 5mm;
-                text-align: center;
-            }
-        }
-        #etikett img {
-            max-width: 100%;
-            height: auto;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-st.title("🖨️ GTIN-Etikett direkt drucken")
-st.caption("Gib eine GTIN ein und drucke das Etikett direkt im Browser – exakt 60×30 mm.")
+st.title("🖼️ GTIN-Etikett als PNG")
+st.caption("Gib eine GTIN ein, zeige den Barcode an und lade ihn als PNG herunter – direkt druckbar aus dem Bildfenster.")
 
 gtin = st.text_input("GTIN eingeben oder scannen:", max_chars=14)
 
 if gtin and len(gtin) >= 8:
     try:
+        # Barcode generieren
         ean = barcode.get("ean13", gtin.zfill(13), writer=ImageWriter())
         buffer = io.BytesIO()
         ean.write(buffer, options={"module_height": 15.0, "font_size": 10})
         buffer.seek(0)
-        img_data = base64.b64encode(buffer.getvalue()).decode()
+        img = Image.open(buffer)
 
-        st.markdown(f"""
-            <div id='etikett'>
-                <img src='data:image/png;base64,{img_data}' />
-                <p style='font-size:14px;'>GTIN: {gtin}</p>
-            </div>
-        """, unsafe_allow_html=True)
+        # Barcode anzeigen
+        st.image(img, caption=f"GTIN: {gtin}", use_column_width=False)
 
-        if st.button("🖨️ Etikett drucken"):
-            components.html("<script>window.print()</script>", height=0)
+        # PNG herunterladen
+        st.download_button(
+            label="📥 PNG herunterladen",
+            data=buffer,
+            file_name=f"etikett_{gtin}.png",
+            mime="image/png"
+        )
+
+        # Öffnen in neuem Tab zum direkten Drucken
+        b64 = base64.b64encode(buffer.getvalue()).decode()
+        link = f"<a href='data:image/png;base64,{b64}' target='_blank'>🔗 Öffnen in neuem Tab zum Drucken</a>"
+        st.markdown(link, unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
