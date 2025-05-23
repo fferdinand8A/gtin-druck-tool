@@ -7,59 +7,59 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
 
-st.title("🧾 GTIN-Etikett drucken")
+st.title("GTIN-Etikett drucken")
 
 gtin = st.text_input("GTIN eingeben oder scannen:")
 
 if gtin and len(gtin) in [8, 12, 13, 14]:
     try:
-        # Barcode generieren mit Text
+        # Barcode generieren ohne eingebetteten Text
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
-        ean.write(buffer, {"write_text": True, "font_size": 16, "text_distance": 2, "module_height": 25})
-        b64 = base64.b64encode(buffer.getvalue()).decode()
+        ean.write(buffer, {
+            "write_text": False,
+            "module_height": 20,
+            "module_width": 0.4
+        })
+        barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
-        # HTML für exakt formatierte Druckansicht
+        # HTML mit 60x30mm Layout
         html = f"""
         <html>
         <head>
-            <style>
-                @media print {{
-                    body {{
-                        margin: 0;
-                        padding: 0;
-                    }}
-                    .label {{
-                        width: 60mm;
-                        height: 30mm;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        page-break-after: always;
-                    }}
+        <style>
+            @media print {{
+                @page {{
+                    size: 60mm 30mm;
+                    margin: 0;
                 }}
                 body {{
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    height: 100vh;
+                    margin: 0;
                 }}
-                .label img {{
-                    max-width: 100%;
-                    height: auto;
-                }}
-            </style>
+            }}
+            body {{
+                width: 60mm;
+                height: 30mm;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                font-family: Arial, sans-serif;
+                font-size: 10pt;
+            }}
+            img {{
+                max-height: 20mm;
+            }}
+        </style>
         </head>
-        <body>
-            <div class="label">
-                <img src="data:image/png;base64,{b64}" alt="GTIN Barcode">
-            </div>
-            <script>window.print();</script>
+        <body onload="window.print()">
+            <img src="data:image/png;base64,{barcode_b64}" alt="GTIN Barcode">
+            <div>GTIN: {gtin}</div>
         </body>
         </html>
         """
 
-        # In Streamlit anzeigen
+        # Seite direkt anzeigen und drucken
         components.html(html, height=400)
 
     except Exception as e:
