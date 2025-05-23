@@ -3,44 +3,49 @@ import barcode
 from barcode.writer import ImageWriter
 from io import BytesIO
 import base64
-from PIL import Image
 
-st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
+st.set_page_config(page_title="GTIN-Etikett drucken")
 
 st.title("🧾 GTIN-Etikett drucken")
-st.markdown("Gib eine GTIN/EAN ein und drucke sofort das Etikett als Barcode – direkt im Browser.")
+st.markdown("Gib eine GTIN/EAN ein und drucke dein Barcode-Etikett im Browser.")
 
-# Eingabefeld
-gtin = st.text_input("GTIN eingeben oder scannen:", max_chars=14)
+gtin = st.text_input("GTIN eingeben oder scannen:")
 
-if gtin and len(gtin) in [8, 12, 13, 14] and gtin.isdigit():
+if gtin and len(gtin) in [8, 12, 13, 14]:
     try:
-        # Barcode generieren
+        # Barcode erzeugen
+        ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
-        ean = barcode.get("ean13", gtin.zfill(13), writer=ImageWriter())
         ean.write(buffer)
-        buffer.seek(0)
+        b64 = base64.b64encode(buffer.getvalue()).decode()
 
-        # Bild in base64 konvertieren
-        img_base64 = base64.b64encode(buffer.read()).decode()
+        # HTML für neue Druckseite erzeugen
+        html = f"""
+        <html>
+        <head>
+            <title>Etikett drucken</title>
+            <style>
+                body {{ margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }}
+                img {{ width: 180px; }}
+            </style>
+        </head>
+        <body onload="window.print()">
+            <div>
+                <img src="data:image/png;base64,{b64}" alt="Barcode" />
+                <p style="text-align:center;">GTIN: {gtin}</p>
+            </div>
+        </body>
+        </html>
+        """
 
-        # Barcode anzeigen
-        st.image(f"data:image/png;base64,{img_base64}", use_column_width=False)
+        # Als Base64-HTML-Data-URL
+        encoded_html = base64.b64encode(html.encode()).decode()
+        data_url = f'data:text/html;base64,{encoded_html}'
+
+        # Zeige Barcode und Druck-Button
+        st.image(buffer.getvalue(), use_container_width=True)
         st.markdown(f"**GTIN:** {gtin}")
-
-        # JS-Druckfunktion
-        st.markdown(f"""
-        <script>
-        function printEtikett() {{
-            const w = window.open();
-            w.document.write(`<img src="data:image/png;base64,{img_base64}" onload="window.print(); window.close();" />`);
-            w.document.close();
-        }}
-        </script>
-        <button onclick="printEtikett()">🖨️ Etikett drucken</button>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<a href="{data_url}" target="_blank"><button>🖨️ Etikett drucken</button></a>', unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
-elif gtin:
-    st.warning("Bitte eine gültige GTIN/EAN mit 8, 12, 13 oder 14 Ziffern eingeben.")
+        st.error(f"Fehler: {e}")
