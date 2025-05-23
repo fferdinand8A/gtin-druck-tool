@@ -1,58 +1,71 @@
 import streamlit as st
 import barcode
 from barcode.writer import ImageWriter
-from PIL import Image
-import io
+from io import BytesIO
 import base64
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
+st.title("GTIN-Etikett drucken")
 
-st.title("**GTIN-Etikett drucken**")
-st.markdown("Gib eine GTIN/EAN ein und drucke sofort dein Barcode-Etikett.")
+# Initialisierung der Session-State
+if "gtin" not in st.session_state:
+    st.session_state.gtin = ""
 
-# Textfeld
-gtin = st.text_input("GTIN eingeben oder scannen:", max_chars=14)
+# Eingabefeld
+gtin = st.text_input("GTIN eingeben oder scannen:", value=st.session_state.gtin, key="gtin_input")
 
-# Wenn GTIN gültig ist
-if gtin.isdigit() and 12 <= len(gtin) <= 14:
-    # Barcode generieren
-    barcode_class = barcode.get_barcode_class('ean13') if len(gtin) == 13 else barcode.get_barcode_class('ean14')
-    buffer = io.BytesIO()
-    barcode_class(gtin, writer=ImageWriter()).write(buffer)
-    buffer.seek(0)
+# Validierung und Anzeige
+if gtin and len(gtin) in [8, 12, 13, 14]:
+    try:
+        ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
+        buffer = BytesIO()
+        ean.write(buffer, {
+            "write_text": False,
+            "module_height": 20,
+            "module_width": 0.4
+        })
+        barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
-    # base64 kodieren
-    base64_img = base64.b64encode(buffer.read()).decode()
+        html = f"""
+        <html>
+        <head>
+        <style>
+            @media print {{
+                @page {{
+                    size: 60mm 30mm;
+                    margin: 0;
+                }}
+                body {{
+                    margin: 0;
+                }}
+            }}
+            body {{
+                width: 60mm;
+                height: 30mm;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                font-family: Arial, sans-serif;
+                font-size: 10pt;
+            }}
+            img {{
+                max-height: 20mm;
+            }}
+        </style>
+        </head>
+        <body onload="window.print()">
+            <img src="data:image/png;base64,{barcode_b64}" alt="GTIN Barcode">
+            <div>GTIN: {gtin}</div>
+        </body>
+        </html>
+        """
 
-    # Vorschau anzeigen
-    st.image(f"data:image/png;base64,{base64_img}", caption=f"GTIN: {gtin}", use_column_width=False)
+        components.html(html, height=400)
 
-    # HTML und JS: neues Fenster mit Druck
-    print_html = f"""
-    <script>
-        function printBarcode() {{
-            var win = window.open("", "_blank");
-            win.document.write(`
-                <html>
-                    <head><title>Etikett</title></head>
-                    <body style="margin:0;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;">
-                        <img src="data:image/png;base64,{base64_img}" style="width:240px;height:auto;"/>
-                        <p style="font-size:18px;margin:10px 0;">GTIN: {gtin}</p>
-                        <script>window.onload = function() {{
-                            window.print();
-                            window.onafterprint = function() {{ window.close(); }};
-                        }};<\/script>
-                    </body>
-                </html>
-            `);
-            win.document.close();
-        }}
-    </script>
-    <button onclick="printBarcode()">Etikett drucken</button>
-    """
+        # Zurücksetzen nach Anzeige
+        st.session_state.gtin = ""
 
-    # Button anzeigen
-    st.components.v1.html(print_html, height=100)
-
-    # Hinweis für Leeren: (manuell nach Klick)
-    st.caption("Das Feld leert sich nach dem nächsten Seiten-Neuladen oder Scan.")
+    except Exception as e:
+        st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
