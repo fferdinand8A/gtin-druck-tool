@@ -4,11 +4,13 @@ from barcode.writer import ImageWriter
 import io
 import base64
 from PIL import Image
+import uuid
+import os
 
 st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
 
-st.title("🖨️ GTIN-Etikett direkt drucken")
-st.caption("Gib eine GTIN/EAN ein, sieh den Barcode und drucke ihn direkt aus dem Browser.")
+st.title("🖨️ GTIN-Etikett direkt drucken (über temporäre Datei)")
+st.caption("Gib eine GTIN/EAN ein, zeige den Barcode, und drucke ihn direkt aus dem Browser.")
 
 gtin = st.text_input("GTIN eingeben oder scannen:", max_chars=14)
 
@@ -21,8 +23,11 @@ if gtin and len(gtin) >= 8:
         buffer.seek(0)
         img_base64 = base64.b64encode(buffer.getvalue()).decode()
 
-        # HTML für Druckvorschau mit auto print()
-        html = f'''
+        # Vorschau im Streamlit
+        st.image(buffer, caption=f"GTIN: {gtin}", use_column_width=False)
+
+        # HTML-Inhalt mit window.print()
+        html_content = f'''
         <!DOCTYPE html>
         <html>
         <head>
@@ -57,15 +62,15 @@ if gtin and len(gtin) >= 8:
         </html>
         '''
 
-        html_bytes = html.encode("utf-8")
-        b64_html = base64.b64encode(html_bytes).decode("utf-8")
-        data_url = f"data:text/html;base64,{b64_html}"
+        # Temporäre HTML-Datei speichern im "static/" Ordner
+        html_file = f"etikett_{uuid.uuid4().hex}.html"
+        os.makedirs("static", exist_ok=True)
+        html_path = os.path.join("static", html_file)
+        with open(html_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
 
-        # Button anzeigen
-        st.markdown(f"<a href='{data_url}' target='_blank'>🖨️ Etikett in neuem Tab drucken</a>", unsafe_allow_html=True)
-
-        # Barcode auch direkt in Streamlit anzeigen
-        st.image(buffer, caption=f"GTIN: {gtin}", use_column_width=False)
+        # Druck-Link anzeigen
+        st.markdown(f"[🖨️ Etikett in neuem Tab drucken](/static/{html_file})", unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
