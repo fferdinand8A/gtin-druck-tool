@@ -5,37 +5,67 @@ import io
 import base64
 from PIL import Image
 
-st.set_page_config(page_title="GTIN Etikett PNG", layout="centered")
+st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
 
-st.title("🖼️ GTIN-Etikett als PNG")
-st.caption("Gib eine GTIN ein, zeige den Barcode an und lade ihn als PNG herunter – direkt druckbar aus dem Bildfenster.")
+st.title("🖨️ GTIN-Etikett direkt drucken")
+st.caption("Gib eine GTIN/EAN ein, sieh den Barcode und drucke ihn direkt aus dem Browser.")
 
 gtin = st.text_input("GTIN eingeben oder scannen:", max_chars=14)
 
 if gtin and len(gtin) >= 8:
     try:
-        # Barcode generieren
+        # Barcode erzeugen
         ean = barcode.get("ean13", gtin.zfill(13), writer=ImageWriter())
         buffer = io.BytesIO()
         ean.write(buffer, options={"module_height": 15.0, "font_size": 10})
         buffer.seek(0)
-        img = Image.open(buffer)
+        img_base64 = base64.b64encode(buffer.getvalue()).decode()
 
-        # Barcode anzeigen
-        st.image(img, caption=f"GTIN: {gtin}", use_column_width=False)
+        # HTML für Druckvorschau mit auto print()
+        html = f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Etikett drucken</title>
+            <style>
+                body {{
+                    margin: 0;
+                    padding: 0;
+                    text-align: center;
+                }}
+                img {{
+                    margin-top: 20px;
+                    max-width: 100%;
+                    height: auto;
+                }}
+                @media print {{
+                    body {{
+                        margin: 0;
+                    }}
+                }}
+            </style>
+        </head>
+        <body>
+            <img src="data:image/png;base64,{img_base64}" alt="GTIN Barcode" />
+            <p>GTIN: {gtin}</p>
+            <script>
+                window.onload = function() {{
+                    window.print();
+                }}
+            </script>
+        </body>
+        </html>
+        '''
 
-        # PNG herunterladen
-        st.download_button(
-            label="📥 PNG herunterladen",
-            data=buffer,
-            file_name=f"etikett_{gtin}.png",
-            mime="image/png"
-        )
+        html_bytes = html.encode("utf-8")
+        b64_html = base64.b64encode(html_bytes).decode("utf-8")
+        data_url = f"data:text/html;base64,{b64_html}"
 
-        # Öffnen in neuem Tab zum direkten Drucken
-        b64 = base64.b64encode(buffer.getvalue()).decode()
-        link = f"<a href='data:image/png;base64,{b64}' target='_blank'>🔗 Öffnen in neuem Tab zum Drucken</a>"
-        st.markdown(link, unsafe_allow_html=True)
+        # Button anzeigen
+        st.markdown(f"<a href='{data_url}' target='_blank'>🖨️ Etikett in neuem Tab drucken</a>", unsafe_allow_html=True)
+
+        # Barcode auch direkt in Streamlit anzeigen
+        st.image(buffer, caption=f"GTIN: {gtin}", use_column_width=False)
 
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
