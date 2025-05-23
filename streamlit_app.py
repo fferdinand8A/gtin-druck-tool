@@ -3,6 +3,7 @@ import barcode
 from barcode.writer import ImageWriter
 from PIL import Image
 import io
+import base64
 
 st.set_page_config(page_title="GTIN Etikett", layout="centered")
 
@@ -23,6 +24,9 @@ st.markdown("""
                 text-align: center;
             }
         }
+        button {
+            margin-top: 20px;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -35,14 +39,18 @@ if gtin and len(gtin) >= 8:
         buffer = io.BytesIO()
         ean.write(buffer, options={"module_height": 15.0, "font_size": 10})
         buffer.seek(0)
-        img_data = buffer.getvalue()
-        st.markdown(f"""
+        img_data = base64.b64encode(buffer.getvalue()).decode()
+
+        html = f'''
             <div id="etikett">
-                <img src="data:image/png;base64,{img_data.encode('base64').decode()}" />
+                <img src="data:image/png;base64,{img_data}" style="margin-top: 20px;"/>
                 <p style="font-size:18px;">GTIN: {gtin}</p>
             </div>
-            <br>
             <button onclick="window.print()">Etikett drucken</button>
-        """, unsafe_allow_html=True)
+        '''
+        st.markdown(html, unsafe_allow_html=True)
+
     except Exception as e:
-        st.error(f"Fehler beim Barcode: {e}")
+        st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
+elif gtin:
+    st.warning("Bitte mindestens 8 Ziffern eingeben.")
