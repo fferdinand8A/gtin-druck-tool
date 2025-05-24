@@ -5,31 +5,26 @@ from io import BytesIO
 import base64
 import streamlit.components.v1 as components
 
-# Seiteneinstellungen
 st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
 
-# Headline
+# Titel
 st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
 
-# Session-State initialisieren
+# Eingabe-Feld mit Session-State
 if "gtin_input" not in st.session_state:
-    st.session_state.gtin_input = ""
-if "printed" not in st.session_state:
-    st.session_state.printed = False
+    st.session_state["gtin_input"] = ""
 
-# Eingabe-Feld
+# Reset-Funktion
+def reset_input():
+    st.session_state["gtin_input"] = ""
+
+# Eingabe
 gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
 
-# Reset-Logik über Button
-if st.button("🔄 Reset Eingabe"):
-    st.session_state.gtin_input = ""
-    st.session_state.printed = False
-    st.rerun()  # Offiziell unterstützte Methode ab Streamlit v1.27+
-
-# GTIN verarbeiten, sobald sie eingegeben wurde
-if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
+# GTIN prüfen
+if gtin and len(gtin) in [8, 12, 13, 14]:
     try:
-        # Barcode generieren
+        # Barcode erzeugen
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
@@ -75,9 +70,12 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
         </html>
         """
 
-        # Barcode und Druckbefehl anzeigen
         components.html(html, height=400)
-        st.session_state.printed = True
 
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
+
+# Reset-Button
+st.markdown("<br>", unsafe_allow_html=True)
+if st.button("🔄 Reset Eingabe"):
+    reset_input()
