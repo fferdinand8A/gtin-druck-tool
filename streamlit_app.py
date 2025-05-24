@@ -11,18 +11,21 @@ st.set_page_config(page_title="GTIN-Toolbox", layout="centered")
 # Headline
 st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
 
+# Session-State initialisieren
+if "gtin_input" not in st.session_state:
+    st.session_state["gtin_input"] = ""
+
 # Eingabe
 gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
 
-# Reset-Knopf
+# Reset-Button
 if st.button("Reset Eingabe"):
-    st.session_state.gtin_input = ""
+    st.session_state["gtin_input"] = ""
     st.experimental_rerun()
 
-# Barcode-Verarbeitung
+# Barcode erzeugen und anzeigen
 if gtin and len(gtin) in [8, 12, 13, 14]:
     try:
-        # Barcode generieren
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
@@ -32,7 +35,6 @@ if gtin and len(gtin) in [8, 12, 13, 14]:
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
-        # HTML mit automatischem Druck (einmal)
         html = f"""
         <html>
         <head>
@@ -73,7 +75,6 @@ if gtin and len(gtin) in [8, 12, 13, 14]:
         </html>
         """
 
-        # Barcode und Druck anzeigen
         components.html(html, height=400)
 
     except Exception as e:
