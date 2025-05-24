@@ -5,33 +5,40 @@ from io import BytesIO
 import base64
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="GTIN-Toolbox", layout="centered")
+st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
 
-# Title
+# Headline
 st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
 
-# Initialisieren
+# Session-Initialisierung
+if "gtin_input" not in st.session_state:
+    st.session_state.gtin_input = ""
 if "printed" not in st.session_state:
     st.session_state.printed = False
 
-# Eingabefeld
-def trigger_print():
-    st.session_state.printed = True
+# Reset-Funktion
+def reset_input():
+    st.session_state.gtin_input = ""
+    st.session_state.printed = False
+    st.rerun()  # ersetzt experimental_rerun
 
-gtin_input = st.text_input("GTIN eingeben oder scannen:", key="gtin_input", on_change=trigger_print)
+# Eingabe-Feld
+gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
 
-# Barcode erzeugen und Druck auslösen
-if st.session_state.get("printed") and gtin_input and len(gtin_input) in [8, 12, 13, 14]:
+# GTIN prüfen
+if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
     try:
-        ean = barcode.get('ean13', gtin_input.zfill(13), writer=ImageWriter())
+        # Barcode generieren
+        ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
-            "write_text": False,
+            "write_text": True,
             "module_height": 20,
             "module_width": 0.4
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
+        # HTML Druckseite
         html = f"""
         <html>
         <head>
@@ -43,42 +50,38 @@ if st.session_state.get("printed") and gtin_input and len(gtin_input) in [8, 12,
                 }}
                 body {{
                     margin: 0;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    flex-direction: column;
-                    font-family: Arial, sans-serif;
-                    font-size: 10pt;
                 }}
-                img {{
-                    max-height: 20mm;
-                }}
+            }}
+            body {{
+                width: 60mm;
+                height: 30mm;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                font-family: Arial, sans-serif;
+                font-size: 10pt;
+            }}
+            img {{
+                max-height: 20mm;
             }}
         </style>
         </head>
-        <body onload="window.print(); setTimeout(() => window.close(), 500);">
+        <body onload="window.print()">
             <img src="data:image/png;base64,{barcode_b64}" alt="GTIN Barcode">
-            <div>GTIN: {gtin_input}</div>
+            <div>GTIN: {gtin}</div>
         </body>
         </html>
         """
 
-        components.html(f"<script>let w = window.open('', '_blank'); w.document.write(`{html}`); w.document.close();</script>", height=0)
-
-        # Reset vorbereiten und Seite neu laden
-        del st.session_state["gtin_input"]
-        st.session_state.printed = False
-        st.experimental_rerun()
+        # Druckseite anzeigen
+        components.html(html, height=400)
+        st.session_state.printed = True
 
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
-        st.session_state.printed = False
 
-# Reset-Knopf zentriert
-st.markdown("<div style='text-align: center; margin-top: 30px;'>", unsafe_allow_html=True)
-if st.button("Reset Eingabe"):
-    if "gtin_input" in st.session_state:
-        del st.session_state["gtin_input"]
-    st.session_state.printed = False
-    st.experimental_rerun()
-st.markdown("</div>", unsafe_allow_html=True)
+# Reset-Knopf unten platzieren
+st.markdown("<br>", unsafe_allow_html=True)
+if st.button("🔄 Reset Eingabe"):
+    reset_input()
