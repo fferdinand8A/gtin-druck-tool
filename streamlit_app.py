@@ -5,17 +5,21 @@ from io import BytesIO
 import base64
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
-st.title("GTIN-Etikett drucken")
+# Seiteneinstellungen
+st.set_page_config(page_title="GTIN-Toolbox", layout="centered")
 
-# GTIN aus Session State initialisieren
-if "gtin" not in st.session_state:
-    st.session_state.gtin = ""
+# Headline
+st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
 
-# Eingabe-Feld mit Session State
-gtin = st.text_input("GTIN eingeben oder scannen:", value=st.session_state.gtin, key="gtin_input")
+# Eingabe
+gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
 
-# Nur wenn gültig
+# Reset-Knopf
+if st.button("Reset Eingabe"):
+    st.session_state.gtin_input = ""
+    st.experimental_rerun()
+
+# Barcode-Verarbeitung
 if gtin and len(gtin) in [8, 12, 13, 14]:
     try:
         # Barcode generieren
@@ -28,7 +32,7 @@ if gtin and len(gtin) in [8, 12, 13, 14]:
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
-        # HTML-Seite im neuen Tab drucken
+        # HTML mit automatischem Druck (einmal)
         html = f"""
         <html>
         <head>
@@ -56,19 +60,21 @@ if gtin and len(gtin) in [8, 12, 13, 14]:
                 max-height: 20mm;
             }}
         </style>
+        <script>
+            window.onload = function() {{
+                window.print();
+            }};
+        </script>
         </head>
-        <body onload="window.print(); window.close();">
+        <body>
             <img src="data:image/png;base64,{barcode_b64}" alt="GTIN Barcode">
             <div>GTIN: {gtin}</div>
         </body>
         </html>
         """
 
-        # Drucken als HTML-Komponente
+        # Barcode und Druck anzeigen
         components.html(html, height=400)
-
-        # Feld nach Anzeige leeren
-        st.session_state.gtin = ""
 
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
