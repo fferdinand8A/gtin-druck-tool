@@ -8,9 +8,6 @@ import streamlit.components.v1 as components
 # Seiteneinstellungen
 st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
 
-# Titel
-st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
-
 # Session-Variablen initialisieren
 if "gtin_input" not in st.session_state:
     st.session_state["gtin_input"] = ""
@@ -22,18 +19,21 @@ if "reset_triggered" not in st.session_state:
 # Reset-Funktion
 def reset_input():
     st.session_state["reset_triggered"] = True
+    st.experimental_rerun()  # sofortige Neuladefunktion für aktuelle Streamlit-Version
 
-# Eingabefeld
-gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
-
-# Prüfen, ob Reset ausgelöst wurde
+# Reset prüfen, bevor das Widget erscheint
 if st.session_state["reset_triggered"]:
     st.session_state["gtin_input"] = ""
     st.session_state["printed"] = False
     st.session_state["reset_triggered"] = False
-    st.rerun()
 
-# Barcode generieren und Druckfenster anzeigen
+# Titel
+st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
+
+# Eingabefeld
+gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
+
+# Barcode erzeugen und Druck auslösen
 if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state["printed"]:
     try:
         ean = barcode.get("ean13", gtin.zfill(13), writer=ImageWriter())
@@ -45,7 +45,6 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state["printed"]:
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
-        # HTML-Druckseite mit automatischem Print
         html = f"""
         <html>
         <head>
@@ -86,7 +85,7 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state["printed"]:
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
 
-# Reset-Button unten anzeigen
+# Reset-Button unten platzieren
 st.markdown("<br><br>", unsafe_allow_html=True)
 if st.button("🔄 Reset Eingabe"):
     reset_input()
