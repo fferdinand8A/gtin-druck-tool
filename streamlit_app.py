@@ -5,12 +5,13 @@ from io import BytesIO
 import base64
 import streamlit.components.v1 as components
 
+# Seiteneinstellungen
 st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
 
-# Headline
+# Titel
 st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
 
-# Session-Initialisierung
+# Session-Variablen initialisieren
 if "gtin_input" not in st.session_state:
     st.session_state["gtin_input"] = ""
 if "printed" not in st.session_state:
@@ -18,20 +19,24 @@ if "printed" not in st.session_state:
 if "reset_triggered" not in st.session_state:
     st.session_state["reset_triggered"] = False
 
-# Reset-Logik ausführen vor Anzeige
+# Reset-Funktion
+def reset_input():
+    st.session_state["reset_triggered"] = True
+
+# Eingabefeld
+gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
+
+# Prüfen, ob Reset ausgelöst wurde
 if st.session_state["reset_triggered"]:
     st.session_state["gtin_input"] = ""
     st.session_state["printed"] = False
     st.session_state["reset_triggered"] = False
-    st.experimental_rerun()
+    st.rerun()
 
-# Eingabe-Feld
-gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
-
-# GTIN prüfen
+# Barcode generieren und Druckfenster anzeigen
 if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state["printed"]:
     try:
-        ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
+        ean = barcode.get("ean13", gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
             "write_text": True,
@@ -40,6 +45,7 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state["printed"]:
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
+        # HTML-Druckseite mit automatischem Print
         html = f"""
         <html>
         <head>
@@ -80,8 +86,7 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state["printed"]:
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
 
-# Reset-Knopf
+# Reset-Button unten anzeigen
 st.markdown("<br><br>", unsafe_allow_html=True)
 if st.button("🔄 Reset Eingabe"):
-    st.session_state["reset_triggered"] = True
-    st.experimental_rerun()
+    reset_input()
