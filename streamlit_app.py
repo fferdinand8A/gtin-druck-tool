@@ -21,10 +21,11 @@ if "printed" not in st.session_state:
 gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
 
 # Reset-Logik über Button
-if st.button("🔄 Reset Eingabe"):
-    st.session_state.gtin_input = ""
-    st.session_state.printed = False
-    st.rerun()  # Offiziell unterstützte Methode ab Streamlit v1.27+
+def reset_input():
+    st.session_state["gtin_input"] = ""
+    st.session_state["printed"] = False
+
+st.button("🔄 Reset Eingabe", on_click=reset_input)
 
 # GTIN verarbeiten, sobald sie eingegeben wurde
 if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
