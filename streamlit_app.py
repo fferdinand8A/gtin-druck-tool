@@ -12,23 +12,25 @@ st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", 
 
 # Session-Initialisierung
 if "gtin_input" not in st.session_state:
-    st.session_state.gtin_input = ""
+    st.session_state["gtin_input"] = ""
 if "printed" not in st.session_state:
-    st.session_state.printed = False
+    st.session_state["printed"] = False
+if "reset_triggered" not in st.session_state:
+    st.session_state["reset_triggered"] = False
 
-# Reset-Funktion
-def reset_input():
-    st.session_state.gtin_input = ""
-    st.session_state.printed = False
-    st.rerun()  # ersetzt experimental_rerun
+# Reset-Logik ausführen vor Anzeige
+if st.session_state["reset_triggered"]:
+    st.session_state["gtin_input"] = ""
+    st.session_state["printed"] = False
+    st.session_state["reset_triggered"] = False
+    st.experimental_rerun()
 
 # Eingabe-Feld
 gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
 
 # GTIN prüfen
-if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
+if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state["printed"]:
     try:
-        # Barcode generieren
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
@@ -38,7 +40,6 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
-        # HTML Druckseite
         html = f"""
         <html>
         <head>
@@ -73,15 +74,14 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
         </body>
         </html>
         """
-
-        # Druckseite anzeigen
         components.html(html, height=400)
-        st.session_state.printed = True
+        st.session_state["printed"] = True
 
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
 
-# Reset-Knopf unten platzieren
-st.markdown("<br>", unsafe_allow_html=True)
+# Reset-Knopf
+st.markdown("<br><br>", unsafe_allow_html=True)
 if st.button("🔄 Reset Eingabe"):
-    reset_input()
+    st.session_state["reset_triggered"] = True
+    st.experimental_rerun()
