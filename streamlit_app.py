@@ -5,30 +5,29 @@ from io import BytesIO
 import base64
 import streamlit.components.v1 as components
 
+# Seiteneinstellungen
 st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
 
-# Titel
+# Headline
 st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
 
-# Query-Parameter auslesen (für automatischen Reset)
-query_params = st.query_params
-if "reset" in query_params:
-    st.session_state["gtin_input"] = ""
-
-# Session-Variablen initialisieren
+# Session-State initialisieren
 if "gtin_input" not in st.session_state:
-    st.session_state["gtin_input"] = ""
-
-# Reset-Funktion
-def reset_input():
-    st.session_state["gtin_input"] = ""
-    st.rerun()
+    st.session_state.gtin_input = ""
+if "printed" not in st.session_state:
+    st.session_state.printed = False
 
 # Eingabe-Feld
 gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
 
-# GTIN prüfen
-if gtin and len(gtin) in [8, 12, 13, 14]:
+# Reset-Logik über Button
+if st.button("🔄 Reset Eingabe"):
+    st.session_state.gtin_input = ""
+    st.session_state.printed = False
+    st.rerun()  # Offiziell unterstützte Methode ab Streamlit v1.27+
+
+# GTIN verarbeiten, sobald sie eingegeben wurde
+if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
     try:
         # Barcode generieren
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
@@ -40,19 +39,10 @@ if gtin and len(gtin) in [8, 12, 13, 14]:
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
-        # HTML mit Druck und Auto-Reset
+        # HTML für Druckseite
         html = f"""
         <html>
         <head>
-        <meta charset="utf-8">
-        <script>
-            function triggerPrintAndReset() {{
-                window.print();
-                setTimeout(function() {{
-                    window.location.href = window.location.origin + window.location.pathname + "?reset=1";
-                }}, 2000);
-            }}
-        </script>
         <style>
             @media print {{
                 @page {{
@@ -78,20 +68,16 @@ if gtin and len(gtin) in [8, 12, 13, 14]:
             }}
         </style>
         </head>
-        <body onload="triggerPrintAndReset()">
+        <body onload="window.print()">
             <img src="data:image/png;base64,{barcode_b64}" alt="GTIN Barcode">
             <div>GTIN: {gtin}</div>
         </body>
         </html>
         """
 
-        # Druckseite anzeigen
+        # Barcode und Druckbefehl anzeigen
         components.html(html, height=400)
+        st.session_state.printed = True
 
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
-
-# Reset-Button
-st.markdown("<br>", unsafe_allow_html=True)
-if st.button("🔄 Reset Eingabe"):
-    reset_input()
