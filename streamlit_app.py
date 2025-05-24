@@ -7,27 +7,23 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="GTIN-Toolbox", layout="centered")
 
-# Titel
+# Title
 st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
 
-# Session-State initialisieren
+# Session-State vorbereiten
 if "gtin_input" not in st.session_state:
     st.session_state.gtin_input = ""
 if "trigger_print" not in st.session_state:
     st.session_state.trigger_print = False
 
-# Eingabefeld
+# Eingabe-Callback
 def trigger_barcode():
     st.session_state.trigger_print = True
 
+# GTIN Eingabefeld
 st.text_input("GTIN eingeben oder scannen:", key="gtin_input", on_change=trigger_barcode)
 
-# Reset-Funktion (nur als Callback erlaubt)
-def reset_fields():
-    st.session_state.gtin_input = ""
-    st.session_state.trigger_print = False
-
-# Barcode-Anzeige & Druck
+# Barcode anzeigen + automatisch drucken
 if st.session_state.trigger_print and st.session_state.gtin_input and len(st.session_state.gtin_input) in [8, 12, 13, 14]:
     try:
         gtin = st.session_state.gtin_input
@@ -70,6 +66,9 @@ if st.session_state.trigger_print and st.session_state.gtin_input and len(st.ses
         <script>
             window.onload = function() {{
                 window.print();
+                setTimeout(function() {{
+                    fetch('/_stcore/reset', {{ method: 'POST' }}).then(() => window.location.reload());
+                }}, 1000);
             }};
         </script>
         </head>
@@ -81,9 +80,12 @@ if st.session_state.trigger_print and st.session_state.gtin_input and len(st.ses
         """
 
         components.html(html, height=400)
-
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
 
-# Reset-Knopf
-st.button("Reset Eingabe", on_click=reset_fields)
+# Reset-Knopf korrekt platziert
+st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
+if st.button("Reset Eingabe"):
+    st.session_state.gtin_input = ""
+    st.session_state.trigger_print = False
+st.markdown("</div>", unsafe_allow_html=True)
