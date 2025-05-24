@@ -3,30 +3,25 @@ import barcode
 from barcode.writer import ImageWriter
 from io import BytesIO
 import base64
-import streamlit.components.v1 as components
+import time
 
-# Seite konfigurieren
 st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
 
 # Headline
 st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
 
-# Session-Init
+# Session-Initialisierung
 if "gtin_input" not in st.session_state:
     st.session_state.gtin_input = ""
+if "printed" not in st.session_state:
+    st.session_state.printed = False
 
 # Eingabefeld
 gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
 
-# Button zum manuellen Zurücksetzen
-if st.button("🔄 Reset Eingabe"):
-    st.session_state.gtin_input = ""
-    st.experimental_rerun()
-
-# Wenn gültige GTIN eingegeben
-if gtin and len(gtin) in [8, 12, 13, 14]:
+# Wenn gültige GTIN eingegeben wurde und noch nicht gedruckt wurde
+if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
     try:
-        # Barcode generieren
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
@@ -36,52 +31,34 @@ if gtin and len(gtin) in [8, 12, 13, 14]:
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
-        # HTML-Druckseite mit 2 Sek Pause & Reset
+        # HTML-Code mit einmaliger Druckauslösung
         html = f"""
-        <html>
-        <head>
-        <style>
-            @media print {{
-                @page {{
-                    size: 60mm 30mm;
-                    margin: 0;
-                }}
-                body {{
-                    margin: 0;
-                }}
-            }}
-            body {{
-                width: 60mm;
-                height: 30mm;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                font-family: Arial, sans-serif;
-                font-size: 10pt;
-            }}
-            img {{
-                max-height: 20mm;
-            }}
-        </style>
         <script>
-            window.onload = function() {{
+            setTimeout(function() {{
                 window.print();
-                setTimeout(function() {{
-                    window.location.href = window.location.href.split("?")[0];
-                }}, 2000);  // 2 Sek Puffer
-            }};
+                fetch('/?reset=true');  // Signal an Streamlit zurück
+            }}, 1000);
         </script>
-        </head>
-        <body>
-            <img src="data:image/png;base64,{barcode_b64}" alt="GTIN Barcode">
-            <div>GTIN: {gtin}</div>
-        </body>
-        </html>
+        <img src="data:image/png;base64,{barcode_b64}" alt="GTIN Barcode">
+        <div style="font-size: 18px; margin-top: 10px;">GTIN: {gtin}</div>
         """
 
-        # Barcode anzeigen & drucken
-        components.html(html, height=400)
+        st.markdown(html, unsafe_allow_html=True)
+        st.session_state.printed = True
 
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
+
+# Automatischer Reset bei Reload durch fetch
+query_params = st.experimental_get_query_params()
+if "reset" in query_params:
+    st.session_state.gtin_input = ""
+    st.session_state.printed = False
+    st.experimental_set_query_params()  # Reset URL zurück
+    st.experimental_rerun()
+
+# Manueller Reset-Button
+if st.button("🔄 Reset Eingabe"):
+    st.session_state.gtin_input = ""
+    st.session_state.printed = False
+    st.experimental_rerun()
