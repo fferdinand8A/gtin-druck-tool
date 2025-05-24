@@ -10,21 +10,20 @@ st.set_page_config(page_title="GTIN-Toolbox", layout="centered")
 # Title
 st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
 
-# Session-State vorbereiten
+# Session-State initialisieren
 if "gtin_input" not in st.session_state:
     st.session_state.gtin_input = ""
-if "trigger_print" not in st.session_state:
-    st.session_state.trigger_print = False
+if "printed" not in st.session_state:
+    st.session_state.printed = False
 
-# Eingabe-Callback
-def trigger_barcode():
-    st.session_state.trigger_print = True
+# Eingabefeld
+def trigger_print():
+    st.session_state.printed = True
 
-# GTIN Eingabefeld
-st.text_input("GTIN eingeben oder scannen:", key="gtin_input", on_change=trigger_barcode)
+st.text_input("GTIN eingeben oder scannen:", key="gtin_input", on_change=trigger_print)
 
-# Barcode anzeigen + automatisch drucken
-if st.session_state.trigger_print and st.session_state.gtin_input and len(st.session_state.gtin_input) in [8, 12, 13, 14]:
+# Druckvorgang auslösen
+if st.session_state.printed and st.session_state.gtin_input and len(st.session_state.gtin_input) in [8, 12, 13, 14]:
     try:
         gtin = st.session_state.gtin_input
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
@@ -47,45 +46,47 @@ if st.session_state.trigger_print and st.session_state.gtin_input and len(st.ses
                 }}
                 body {{
                     margin: 0;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    flex-direction: column;
+                    font-family: Arial, sans-serif;
+                    font-size: 10pt;
+                }}
+                img {{
+                    max-height: 20mm;
                 }}
             }}
-            body {{
-                width: 60mm;
-                height: 30mm;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                font-family: Arial, sans-serif;
-                font-size: 10pt;
-            }}
-            img {{
-                max-height: 20mm;
-            }}
         </style>
-        <script>
-            window.onload = function() {{
-                window.print();
-                setTimeout(function() {{
-                    fetch('/_stcore/reset', {{ method: 'POST' }}).then(() => window.location.reload());
-                }}, 1000);
-            }};
-        </script>
         </head>
-        <body>
+        <body onload="window.print(); setTimeout(() => window.close(), 500);">
             <img src="data:image/png;base64,{barcode_b64}" alt="GTIN Barcode">
             <div>GTIN: {gtin}</div>
         </body>
         </html>
         """
 
-        components.html(html, height=400)
+        # Öffne in neuem Fenster (verhindert Dauerschleife im iframe!)
+        js = f"""
+        <script>
+        const win = window.open("", "_blank");
+        win.document.write(`{html}`);
+        win.document.close();
+        </script>
+        """
+        components.html(js, height=0)
+
+        # Zustand zurücksetzen für nächste Eingabe
+        st.session_state.printed = False
+        st.session_state.gtin_input = ""
+
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
+        st.session_state.printed = False
 
-# Reset-Knopf korrekt platziert
-st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
+# Reset-Knopf zentriert
+st.markdown("<div style='text-align: center; margin-top: 30px;'>", unsafe_allow_html=True)
 if st.button("Reset Eingabe"):
     st.session_state.gtin_input = ""
-    st.session_state.trigger_print = False
+    st.session_state.printed = False
 st.markdown("</div>", unsafe_allow_html=True)
