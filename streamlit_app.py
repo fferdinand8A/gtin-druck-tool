@@ -10,25 +10,28 @@ st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
 # Headline
 st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
 
-# Session-Zustände initialisieren
-if "gtin_input" not in st.session_state:
-    st.session_state.gtin_input = ""
+# Init session state
 if "printed" not in st.session_state:
     st.session_state.printed = False
+if "clear_input" not in st.session_state:
+    st.session_state.clear_input = False
 
-# Reset-Funktion
-def reset_input():
-    st.session_state["gtin_input"] = ""
-    st.session_state["printed"] = False
-    st.rerun()
+# Reset Button (führt zu Rerun mit leerem Eingabefeld)
+if st.button("🔄 Reset Eingabe"):
+    st.session_state.clear_input = True
+    st.session_state.printed = False
+    st.experimental_rerun()
 
-# Eingabe-Feld für GTIN
-gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
+# Eingabefeld (nur anzeigen, wenn nicht zu löschen)
+if st.session_state.clear_input:
+    gtin = st.text_input("GTIN eingeben oder scannen:", value="", key="gtin_field")
+    st.session_state.clear_input = False  # nach Anzeige zurücksetzen
+else:
+    gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_field")
 
-# Wenn gültige GTIN und noch nicht gedruckt
+# GTIN prüfen
 if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
     try:
-        # Barcode erzeugen
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
@@ -38,7 +41,6 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
-        # HTML für Druckseite
         html = f"""
         <html>
         <head>
@@ -74,14 +76,8 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
         </html>
         """
 
-        # Druckseite anzeigen
         components.html(html, height=400)
         st.session_state.printed = True
 
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
-
-# Reset-Button
-st.markdown("<br>", unsafe_allow_html=True)
-if st.button("🔄 Reset Eingabe"):
-    reset_input()
