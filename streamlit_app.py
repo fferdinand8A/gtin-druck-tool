@@ -8,23 +8,25 @@ import streamlit.components.v1 as components
 # Seiteneinstellungen
 st.set_page_config(page_title="GTIN-Toolbox", layout="centered")
 
-# Headline
+# Titel
 st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
 
 # Session-State initialisieren
 if "gtin_input" not in st.session_state:
     st.session_state["gtin_input"] = ""
+if "trigger_print" not in st.session_state:
+    st.session_state["trigger_print"] = False
 
-# Eingabe
-gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
-
-# Reset-Button
-if st.button("Reset Eingabe"):
+# Funktion zum Zurücksetzen
+def reset():
     st.session_state["gtin_input"] = ""
-    st.experimental_rerun()
+    st.session_state["trigger_print"] = False
 
-# Barcode erzeugen und anzeigen
-if gtin and len(gtin) in [8, 12, 13, 14]:
+# Eingabefeld
+gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input", on_change=lambda: st.session_state.update({"trigger_print": True}))
+
+# Barcode und Druck anzeigen, wenn trigger gesetzt
+if st.session_state["trigger_print"] and gtin and len(gtin) in [8, 12, 13, 14]:
     try:
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
@@ -65,6 +67,9 @@ if gtin and len(gtin) in [8, 12, 13, 14]:
         <script>
             window.onload = function() {{
                 window.print();
+                setTimeout(function() {{
+                    fetch("/_stcore/streamlit_app?reset=true");
+                }}, 1000);
             }};
         </script>
         </head>
@@ -79,3 +84,8 @@ if gtin and len(gtin) in [8, 12, 13, 14]:
 
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
+
+# Reset-Knopf
+if st.button("Reset Eingabe"):
+    reset()
+    st.experimental_rerun()
