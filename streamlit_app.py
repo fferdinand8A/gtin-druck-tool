@@ -5,33 +5,31 @@ from io import BytesIO
 import base64
 import streamlit.components.v1 as components
 
+# Seiteneinstellungen
 st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
 
 # Headline
 st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
 
-# Init session state
+# Session-State initialisieren
+if "gtin_input" not in st.session_state:
+    st.session_state.gtin_input = ""
 if "printed" not in st.session_state:
     st.session_state.printed = False
-if "clear_input" not in st.session_state:
-    st.session_state.clear_input = False
 
-# Reset Button (führt zu Rerun mit leerem Eingabefeld)
+# Eingabe-Feld
+gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
+
+# Reset-Logik über Button
 if st.button("🔄 Reset Eingabe"):
-    st.session_state.clear_input = True
+    st.session_state.gtin_input = ""
     st.session_state.printed = False
-    st.experimental_rerun()
+    st.rerun()  # Offiziell unterstützte Methode ab Streamlit v1.27+
 
-# Eingabefeld (nur anzeigen, wenn nicht zu löschen)
-if st.session_state.clear_input:
-    gtin = st.text_input("GTIN eingeben oder scannen:", value="", key="gtin_field")
-    st.session_state.clear_input = False  # nach Anzeige zurücksetzen
-else:
-    gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_field")
-
-# GTIN prüfen
+# GTIN verarbeiten, sobald sie eingegeben wurde
 if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
     try:
+        # Barcode generieren
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
@@ -41,6 +39,7 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
+        # HTML für Druckseite
         html = f"""
         <html>
         <head>
@@ -76,6 +75,7 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
         </html>
         """
 
+        # Barcode und Druckbefehl anzeigen
         components.html(html, height=400)
         st.session_state.printed = True
 
