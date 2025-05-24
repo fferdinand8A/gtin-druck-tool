@@ -5,7 +5,6 @@ from io import BytesIO
 import base64
 import streamlit.components.v1 as components
 
-# Seiteneinstellungen
 st.set_page_config(page_title="GTIN-Toolbox", layout="centered")
 
 # Titel
@@ -13,21 +12,25 @@ st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", 
 
 # Session-State initialisieren
 if "gtin_input" not in st.session_state:
-    st.session_state["gtin_input"] = ""
+    st.session_state.gtin_input = ""
 if "trigger_print" not in st.session_state:
-    st.session_state["trigger_print"] = False
-
-# Funktion zum Zurücksetzen
-def reset():
-    st.session_state["gtin_input"] = ""
-    st.session_state["trigger_print"] = False
+    st.session_state.trigger_print = False
 
 # Eingabefeld
-gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input", on_change=lambda: st.session_state.update({"trigger_print": True}))
+def trigger_barcode():
+    st.session_state.trigger_print = True
 
-# Barcode und Druck anzeigen, wenn trigger gesetzt
-if st.session_state["trigger_print"] and gtin and len(gtin) in [8, 12, 13, 14]:
+st.text_input("GTIN eingeben oder scannen:", key="gtin_input", on_change=trigger_barcode)
+
+# Reset-Funktion (nur als Callback erlaubt)
+def reset_fields():
+    st.session_state.gtin_input = ""
+    st.session_state.trigger_print = False
+
+# Barcode-Anzeige & Druck
+if st.session_state.trigger_print and st.session_state.gtin_input and len(st.session_state.gtin_input) in [8, 12, 13, 14]:
     try:
+        gtin = st.session_state.gtin_input
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
@@ -67,9 +70,6 @@ if st.session_state["trigger_print"] and gtin and len(gtin) in [8, 12, 13, 14]:
         <script>
             window.onload = function() {{
                 window.print();
-                setTimeout(function() {{
-                    fetch("/_stcore/streamlit_app?reset=true");
-                }}, 1000);
             }};
         </script>
         </head>
@@ -86,6 +86,4 @@ if st.session_state["trigger_print"] and gtin and len(gtin) in [8, 12, 13, 14]:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
 
 # Reset-Knopf
-if st.button("Reset Eingabe"):
-    reset()
-    st.experimental_rerun()
+st.button("Reset Eingabe", on_click=reset_fields)
