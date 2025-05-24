@@ -10,9 +10,7 @@ st.set_page_config(page_title="GTIN-Toolbox", layout="centered")
 # Title
 st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
 
-# Session-State initialisieren
-if "gtin_input" not in st.session_state:
-    st.session_state.gtin_input = ""
+# Initialisieren
 if "printed" not in st.session_state:
     st.session_state.printed = False
 
@@ -20,13 +18,12 @@ if "printed" not in st.session_state:
 def trigger_print():
     st.session_state.printed = True
 
-st.text_input("GTIN eingeben oder scannen:", key="gtin_input", on_change=trigger_print)
+gtin_input = st.text_input("GTIN eingeben oder scannen:", key="gtin_input", on_change=trigger_print)
 
-# Druckvorgang auslösen
-if st.session_state.printed and st.session_state.gtin_input and len(st.session_state.gtin_input) in [8, 12, 13, 14]:
+# Barcode erzeugen und Druck auslösen
+if st.session_state.get("printed") and gtin_input and len(gtin_input) in [8, 12, 13, 14]:
     try:
-        gtin = st.session_state.gtin_input
-        ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
+        ean = barcode.get('ean13', gtin_input.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
             "write_text": False,
@@ -61,24 +58,17 @@ if st.session_state.printed and st.session_state.gtin_input and len(st.session_s
         </head>
         <body onload="window.print(); setTimeout(() => window.close(), 500);">
             <img src="data:image/png;base64,{barcode_b64}" alt="GTIN Barcode">
-            <div>GTIN: {gtin}</div>
+            <div>GTIN: {gtin_input}</div>
         </body>
         </html>
         """
 
-        # Öffne in neuem Fenster (verhindert Dauerschleife im iframe!)
-        js = f"""
-        <script>
-        const win = window.open("", "_blank");
-        win.document.write(`{html}`);
-        win.document.close();
-        </script>
-        """
-        components.html(js, height=0)
+        components.html(f"<script>let w = window.open('', '_blank'); w.document.write(`{html}`); w.document.close();</script>", height=0)
 
-        # Zustand zurücksetzen für nächste Eingabe
+        # Reset vorbereiten und Seite neu laden
+        del st.session_state["gtin_input"]
         st.session_state.printed = False
-        st.session_state.gtin_input = ""
+        st.experimental_rerun()
 
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
@@ -87,6 +77,8 @@ if st.session_state.printed and st.session_state.gtin_input and len(st.session_s
 # Reset-Knopf zentriert
 st.markdown("<div style='text-align: center; margin-top: 30px;'>", unsafe_allow_html=True)
 if st.button("Reset Eingabe"):
-    st.session_state.gtin_input = ""
+    if "gtin_input" in st.session_state:
+        del st.session_state["gtin_input"]
     st.session_state.printed = False
+    st.experimental_rerun()
 st.markdown("</div>", unsafe_allow_html=True)
