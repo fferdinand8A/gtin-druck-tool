@@ -5,32 +5,27 @@ from io import BytesIO
 import base64
 import streamlit.components.v1 as components
 
+# Seite konfigurieren
 st.set_page_config(page_title="GTIN-Etikett drucken", layout="centered")
 
-# Titel
+# Überschrift
 st.markdown("<h1 style='text-align: center;'>Nando´s & Samer´s Toolbox</h1>", unsafe_allow_html=True)
 
-# Session init
+# Initialisiere Session State
 if "gtin_input" not in st.session_state:
     st.session_state["gtin_input"] = ""
 if "printed" not in st.session_state:
     st.session_state["printed"] = False
-if "reset_flag" not in st.session_state:
-    st.session_state["reset_flag"] = False
 
-# Funktion: Reset
+# Eingabe zurücksetzen
 def reset_input():
-    st.session_state["reset_flag"] = True
+    st.session_state["gtin_input"] = ""
     st.session_state["printed"] = False
 
-# Eingabefeld (verwaltet per "key")
-if st.session_state["reset_flag"]:
-    gtin = st.text_input("GTIN eingeben oder scannen:", value="", key="gtin_input")
-    st.session_state["reset_flag"] = False
-else:
-    gtin = st.text_input("GTIN eingeben oder scannen:", key="gtin_input")
+# Eingabefeld
+gtin = st.text_input("GTIN eingeben oder scannen:", value=st.session_state["gtin_input"], key="gtin_input")
 
-# Barcode generieren und drucken
+# Barcode erzeugen
 if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state["printed"]:
     try:
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
@@ -42,7 +37,7 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state["printed"]:
         })
         b64 = base64.b64encode(buffer.getvalue()).decode()
 
-        # HTML mit Druck
+        # HTML für Barcode + Auto-Druck
         html = f"""
         <html>
         <head>
@@ -84,7 +79,8 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state["printed"]:
     except Exception as e:
         st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
 
-# Reset-Button
-st.markdown("<br>", unsafe_allow_html=True)
+# Reset-Button (zentriert)
+st.markdown("<div style='text-align: center; margin-top: 2em;'>", unsafe_allow_html=True)
 if st.button("🔄 Reset Eingabe"):
     reset_input()
+st.markdown("</div>", unsafe_allow_html=True)
