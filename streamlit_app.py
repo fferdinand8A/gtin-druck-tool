@@ -30,19 +30,19 @@ st.button("🔄 Reset Eingabe", on_click=reset_input)
 # GTIN verarbeiten, sobald sie eingegeben wurde
 if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
     try:
-        # Barcode generieren mit angepasster Höhe
+        # Barcode generieren ohne extra GTIN-Zeile
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
             "write_text": True,
-            "module_height": 25,  # reduziert für Platzersparnis
+            "module_height": 25,
             "module_width": 0.5,
             "font_size": 10,
             "quiet_zone": 2
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
-        # HTML für Druckseite (einseitig)
+        # HTML für Druckseite – nur Barcode
         html = f"""
         <html>
         <head>
@@ -72,20 +72,15 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
                 height: auto;
                 margin: 0;
             }}
-            .gtin-text {{
-                margin-top: -2mm;
-                font-size: 9pt;
-            }}
         </style>
         </head>
         <body onload="window.print()">
             <img src="data:image/png;base64,{barcode_b64}" alt="GTIN Barcode">
-            <div class="gtin-text">GTIN: {gtin}</div>
         </body>
         </html>
         """
 
-        # Barcode und Druckbefehl anzeigen
+        # Anzeige & Druck
         components.html(html, height=400)
         st.session_state.printed = True
 
