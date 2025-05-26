@@ -30,13 +30,13 @@ st.button("🔄 Reset Eingabe", on_click=reset_input)
 # GTIN verarbeiten, sobald sie eingegeben wurde
 if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
     try:
-        # Barcode generieren
+        # Barcode generieren (größer)
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
             "write_text": True,
-            "module_height": 20,
-            "module_width": 0.4
+            "module_height": 30,  # größerer Barcode
+            "module_width": 0.6   # breiterer Strich
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
@@ -65,7 +65,7 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
                 font-size: 10pt;
             }}
             img {{
-                max-height: 20mm;
+                height: 22mm;  /* größerer Barcode */
             }}
         </style>
         </head>
