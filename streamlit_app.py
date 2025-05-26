@@ -30,15 +30,15 @@ st.button("🔄 Reset Eingabe", on_click=reset_input)
 # GTIN verarbeiten, sobald sie eingegeben wurde
 if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
     try:
-        # Barcode generieren (extra groß)
+        # Barcode generieren (leicht reduziert)
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
             "write_text": True,
-            "module_height": 50,   # sehr hoch
-            "module_width": 0.8,   # breitere Striche
-            "font_size": 10,       # kleinerer Text unter Barcode
-            "quiet_zone": 1        # kleinerer Rand
+            "module_height": 35,  # vorher 50
+            "module_width": 0.5,  # vorher 0.8
+            "font_size": 10,
+            "quiet_zone": 2       # minimaler Rand
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
@@ -48,46 +48,3 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
         <head>
         <style>
             @media print {{
-                @page {{
-                    size: 60mm 30mm;
-                    margin: 0;
-                }}
-                body {{
-                    margin: 0;
-                }}
-            }}
-            body {{
-                width: 60mm;
-                height: 30mm;
-                padding: 0;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                font-family: Arial, sans-serif;
-                font-size: 9pt;
-            }}
-            img {{
-                width: 95%;
-                height: auto;
-                margin: 0;
-            }}
-            .gtin-text {{
-                margin-top: -4mm;
-                font-size: 10pt;
-            }}
-        </style>
-        </head>
-        <body onload="window.print()">
-            <img src="data:image/png;base64,{barcode_b64}" alt="GTIN Barcode">
-            <div class="gtin-text">GTIN: {gtin}</div>
-        </body>
-        </html>
-        """
-
-        # Barcode und Druckbefehl anzeigen
-        components.html(html, height=400)
-        st.session_state.printed = True
-
-    except Exception as e:
-        st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
