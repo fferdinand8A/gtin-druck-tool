@@ -30,14 +30,14 @@ st.button("🔄 Reset Eingabe", on_click=reset_input)
 # GTIN verarbeiten, sobald sie eingegeben wurde
 if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
     try:
-        # Barcode generieren (optimale Größe)
+        # Barcode generieren
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
             "write_text": True,
-            "module_height": 35,  # gute Höhe für Etikett
-            "module_width": 0.5,  # passende Breite
-            "font_size": 10,
+            "module_height": 35,  # ideale Höhe
+            "module_width": 0.5,  # saubere Strichbreite
+            "font_size": 10,      # Text unter dem Code
             "quiet_zone": 2       # schmaler Rand
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
@@ -85,4 +85,9 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
         </html>
         """
 
-        # Barcode un
+        # Anzeige & Druck
+        components.html(html, height=400)
+        st.session_state.printed = True
+
+    except Exception as e:
+        st.error(f"Fehler beim Erzeugen des Barcodes: {e}")
