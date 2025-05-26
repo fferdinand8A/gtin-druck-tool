@@ -28,23 +28,4 @@ def reset_input():
 st.button("🔄 Reset Eingabe", on_click=reset_input)
 
 # GTIN verarbeiten, sobald sie eingegeben wurde
-if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
-    try:
-        # Barcode generieren (leicht reduziert)
-        ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
-        buffer = BytesIO()
-        ean.write(buffer, {
-            "write_text": True,
-            "module_height": 35,  # vorher 50
-            "module_width": 0.5,  # vorher 0.8
-            "font_size": 10,
-            "quiet_zone": 2       # minimaler Rand
-        })
-        barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
-
-        # HTML für Druckseite
-        html = f"""
-        <html>
-        <head>
-        <style>
-            @media print {{
+if gtin and len(gtin) in [8]()
