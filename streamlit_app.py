@@ -30,13 +30,15 @@ st.button("🔄 Reset Eingabe", on_click=reset_input)
 # GTIN verarbeiten, sobald sie eingegeben wurde
 if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
     try:
-        # Barcode generieren (größer)
+        # Barcode generieren (extra groß)
         ean = barcode.get('ean13', gtin.zfill(13), writer=ImageWriter())
         buffer = BytesIO()
         ean.write(buffer, {
             "write_text": True,
-            "module_height": 30,  # größerer Barcode
-            "module_width": 0.6   # breiterer Strich
+            "module_height": 50,   # sehr hoch
+            "module_width": 0.8,   # breitere Striche
+            "font_size": 10,       # kleinerer Text unter Barcode
+            "quiet_zone": 1        # kleinerer Rand
         })
         barcode_b64 = base64.b64encode(buffer.getvalue()).decode()
 
@@ -57,21 +59,28 @@ if gtin and len(gtin) in [8, 12, 13, 14] and not st.session_state.printed:
             body {{
                 width: 60mm;
                 height: 30mm;
+                padding: 0;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
                 font-family: Arial, sans-serif;
-                font-size: 10pt;
+                font-size: 9pt;
             }}
             img {{
-                height: 22mm;  /* größerer Barcode */
+                width: 95%;
+                height: auto;
+                margin: 0;
+            }}
+            .gtin-text {{
+                margin-top: -4mm;
+                font-size: 10pt;
             }}
         </style>
         </head>
         <body onload="window.print()">
             <img src="data:image/png;base64,{barcode_b64}" alt="GTIN Barcode">
-            <div>GTIN: {gtin}</div>
+            <div class="gtin-text">GTIN: {gtin}</div>
         </body>
         </html>
         """
